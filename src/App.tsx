@@ -11,10 +11,16 @@ import { PrivateRentalView } from './components/PrivateRentalView';
 import { DigitalTicketView } from './components/DigitalTicketView';
 import { OperatorScannerView } from './components/OperatorScannerView';
 import { PwaSimulatorModal } from './components/PwaSimulatorModal';
+import { LoginScreen } from './components/LoginScreen';
+import { CustomAlertDialog, type CustomAlertState } from './components/CustomAlertDialog';
 import { Plus, RefreshCw } from 'lucide-react';
 
-
 export const App: React.FC = () => {
+  // Auth State (Default false to show Login Access Screen first)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState('Admin');
+
+  // Application State
   const [activeTab, setActiveTab] = useState<NavigationTab>('packages');
   const [packages, setPackages] = useState<RoutePackage[]>(MOCK_PACKAGES);
   const [tickets, setTickets] = useState<TicketBooking[]>(INITIAL_TICKETS);
@@ -27,6 +33,14 @@ export const App: React.FC = () => {
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
 
+  // Custom Alert / Confirm Dialog State (Replaces native browser alert/confirm)
+  const [alertDialog, setAlertDialog] = useState<CustomAlertState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
   // Search filter state
   const [filters, setFilters] = useState<SearchFilterState>({
     origin: '',
@@ -35,6 +49,15 @@ export const App: React.FC = () => {
     passengers: 1,
     category: '',
   });
+
+  const handleLoginSuccess = (username: string) => {
+    setCurrentUser(username);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
 
   const handleResetFilters = () => {
     setFilters({
@@ -89,14 +112,33 @@ export const App: React.FC = () => {
     });
   };
 
-  const handleDeletePackage = (pkgId: string) => {
-    setPackages((prev) => prev.filter((p) => p.id !== pkgId));
+  const handleDeletePackageConfirm = (pkgId: string) => {
+    const pkg = packages.find((p) => p.id === pkgId);
+    setAlertDialog({
+      isOpen: true,
+      title: '¿Eliminar Paquete Turístico?',
+      message: `¿Estás seguro de que deseas eliminar permanentemente el paquete "${pkg?.title || ''}" del catálogo activo?`,
+      type: 'confirm',
+      confirmText: 'Sí, Eliminar',
+      cancelText: 'Cancelar',
+      onConfirm: () => {
+        setPackages((prev) => prev.filter((p) => p.id !== pkgId));
+      },
+    });
   };
 
   const handleRestoreInitialData = () => {
-    if (confirm('¿Restablecer el catálogo original de 10 paquetes turísticos?')) {
-      setPackages(MOCK_PACKAGES);
-    }
+    setAlertDialog({
+      isOpen: true,
+      title: '¿Restablecer Catálogo Base?',
+      message: 'Esta acción restaurará los 10 paquetes turísticos iniciales predeterminados de MovilisTurismo.',
+      type: 'confirm',
+      confirmText: 'Sí, Restablecer',
+      cancelText: 'Cancelar',
+      onConfirm: () => {
+        setPackages(MOCK_PACKAGES);
+      },
+    });
   };
 
   // Package Filter Logic
@@ -111,6 +153,11 @@ export const App: React.FC = () => {
     return matchesOrigin && matchesDest && matchesCat;
   });
 
+  // If user is not authenticated, show Login Screen first
+  if (!isAuthenticated) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   const mainContent = (
     <div className="min-h-screen bg-[#F2F2F2] flex flex-col font-sans text-slate-800 selection:bg-[#37A6A6] selection:text-white pb-20 md:pb-8">
       {/* Header & Navigation */}
@@ -121,6 +168,8 @@ export const App: React.FC = () => {
         isMobilePreview={isMobilePreview}
         setIsMobilePreview={setIsMobilePreview}
         onInstallPwa={() => setIsPwaModalOpen(true)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* PWA Top Banner */}
@@ -181,7 +230,7 @@ export const App: React.FC = () => {
                     packageData={pkg}
                     onSelectPackage={(selected) => setSelectedPackage(selected)}
                     onEditPackage={(pkg) => handleOpenEditModal(pkg)}
-                    onDeletePackage={(id) => handleDeletePackage(id)}
+                    onDeletePackage={(id) => handleDeletePackageConfirm(id)}
                   />
                 ))}
               </div>
@@ -249,17 +298,23 @@ export const App: React.FC = () => {
         onClose={() => setIsPwaModalOpen(false)}
       />
 
+      {/* Custom Styled Floating Alert/Confirm Modal (Replaces browser alert/confirm) */}
+      <CustomAlertDialog
+        dialog={alertDialog}
+        onClose={() => setAlertDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
+
       {/* Footer */}
       <footer className="mt-12 bg-[#0D5FA6] text-white py-6 border-t border-[#2180A6]/40 text-center text-xs font-semibold space-y-2">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-sm">Movilis Turismo PWA</span>
+            <span className="font-extrabold text-sm">MovilisTurismo PWA</span>
             <span className="bg-[#4BBF9E] text-[#0D5FA6] px-2 py-0.5 rounded text-[10px] font-black">
               Ecuador 2026
             </span>
           </div>
           <p className="text-blue-200">
-            CRUD Activo ({packages.length} Paquetes) | Fase 1 y Fase 2 MVP | Requerimientos RF-01, RF-02, RF-04, RF-05 y RF-06
+            Usuario Activo: {currentUser} | CRUD Activo ({packages.length} Paquetes) | Requerimientos RF-01, RF-02, RF-04, RF-05 y RF-06
           </p>
         </div>
       </footer>

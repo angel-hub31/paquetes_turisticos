@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { TicketBooking } from '../types';
+import { generatePdfReceipt } from '../utils/generatePdfReceipt';
 import { QrCode, WifiOff, MapPin, Bus, ShieldCheck, Download, Share2 } from 'lucide-react';
 
 interface DigitalTicketViewProps {
@@ -27,9 +28,7 @@ export const DigitalTicketView: React.FC<DigitalTicketViewProps> = ({ tickets })
     );
   }
 
-  // Simple clean SVG QR Code generator component based on text input hash pattern
   const renderSvgQr = (_payload: string) => {
-
     return (
       <svg className="w-44 h-44 mx-auto" viewBox="0 0 100 100" fill="none">
         <rect width="100" height="100" fill="white" rx="8" />
@@ -190,16 +189,16 @@ export const DigitalTicketView: React.FC<DigitalTicketViewProps> = ({ tickets })
 
             <div className="flex gap-2 justify-center pt-1">
               <button
-                onClick={() => alert(`Descargando ticket ${selectedTicket.ticketCode} en formato offline...`)}
-                className="bg-[#0D5FA6] hover:bg-[#2180A6] text-white p-2 rounded-xl text-xs font-bold transition-colors shadow flex items-center gap-1"
-                title="Descargar Boleto Digital"
+                onClick={() => generatePdfReceipt(selectedTicket)}
+                className="bg-[#0D5FA6] hover:bg-[#2180A6] text-white p-2 px-3 rounded-xl text-xs font-bold transition-colors shadow flex items-center gap-1.5"
+                title="Descargar Comprobante PDF de Transacción"
               >
-                <Download className="w-3.5 h-3.5 text-[#4BBF9E]" /> Descargar
+                <Download className="w-3.5 h-3.5 text-[#4BBF9E]" /> Descargar PDF
               </button>
 
               <button
-                onClick={() => navigator.share?.({ title: selectedTicket.packageName, text: `Mi pasaje QR: ${selectedTicket.ticketCode}` }) || alert('Enlace copiado al portapapeles')}
-                className="bg-[#37A6A6] hover:bg-[#2180A6] text-white p-2 rounded-xl text-xs font-bold transition-colors shadow flex items-center gap-1"
+                onClick={() => navigator.share?.({ title: selectedTicket.packageName, text: `Mi pasaje MovilisTurismo: ${selectedTicket.ticketCode}` }) || alert('Enlace de boleto copiado al portapapeles')}
+                className="bg-[#37A6A6] hover:bg-[#2180A6] text-white p-2 px-3 rounded-xl text-xs font-bold transition-colors shadow flex items-center gap-1.5"
                 title="Compartir por WhatsApp"
               >
                 <Share2 className="w-3.5 h-3.5 text-[#4BBF9E]" /> Compartir

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { RoutePackage } from '../types';
-import { X, MapPin, Save } from 'lucide-react';
-
+import { X, MapPin, Save, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface PackageFormModalProps {
@@ -27,9 +26,9 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
     packageToEdit?.region || 'Sierra'
   );
   const [origin, setOrigin] = useState(packageToEdit?.origin || 'Quito');
-  const [destination, setDestination] = useState(packageToEdit?.destination || 'Baños de Agua Santa');
+  const [destination, setDestination] = useState(packageToEdit?.destination || 'Baños');
   const [intermediateStopsText, setIntermediateStopsText] = useState(
-    packageToEdit?.intermediateStops?.join(', ') || 'Tambillo, Machachi, Latacunga'
+    packageToEdit?.intermediateStops?.join(', ') || 'Machachi, Latacunga'
   );
   const [price, setPrice] = useState(packageToEdit?.price || 79);
   const [originalPrice, setOriginalPrice] = useState(packageToEdit?.originalPrice || 110);
@@ -38,18 +37,84 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
   const [imageUrl, setImageUrl] = useState(
     packageToEdit?.imageUrl || '/images/banos.jpg'
   );
-  const [hotelName, setHotelName] = useState(packageToEdit?.hotelName || 'Hotel Resort Ecuador');
+  const [hotelName, setHotelName] = useState(packageToEdit?.hotelName || 'Hotel Spa');
   const [activitiesText, setActivitiesText] = useState(
-    packageToEdit?.activitiesList?.join(', ') ||
-      'Paseo panorámico en tarabita, Tour nocturno con canelazo, Visita al mirador volcánico'
+    packageToEdit?.activitiesList?.join(', ') || 'Tour cascadas, Tarabita'
   );
   const [departureTimesText, setDepartureTimesText] = useState(
     packageToEdit?.departureTimes?.join(', ') || '06:00 AM, 08:30 AM'
   );
   const [description, setDescription] = useState(
     packageToEdit?.description ||
-      'Disfruta de una experiencia única con transporte interprovincial VIP, hospedaje confortable y actividades exclusivas en uno de los mejores destinos de Ecuador.'
+      'Disfruta de una experiencia única con transporte interprovincial VIP y hospedaje.'
   );
+
+  // Error States
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [originError, setOriginError] = useState<string | null>(null);
+  const [destError, setDestError] = useState<string | null>(null);
+
+  // Validate Title: EXCLUSIVELY letters & spaces, length 2 to 14 characters (mayor a 1 y menor a 15)
+  const validateTitle = (val: string): boolean => {
+    const lettersAndSpaces = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setTitleError('El nombre del paquete es obligatorio.');
+      return false;
+    }
+    if (trimmed.length <= 1) {
+      setTitleError('El nombre debe tener más de 1 caracter (mínimo 2 letras).');
+      return false;
+    }
+    if (trimmed.length >= 15) {
+      setTitleError('El nombre debe tener menos de 15 caracteres (máximo 14 letras).');
+      return false;
+    }
+    if (!lettersAndSpaces.test(trimmed)) {
+      setTitleError('El nombre debe contener EXCLUSIVAMENTE letras (sin números ni símbolos).');
+      return false;
+    }
+
+    setTitleError(null);
+    return true;
+  };
+
+  // Validate Origin: EXCLUSIVELY letters & spaces, length 2 to 14 characters
+  const validateOrigin = (val: string): boolean => {
+    const lettersAndSpaces = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setOriginError('El origen es obligatorio.');
+      return false;
+    }
+    if (trimmed.length <= 1 || trimmed.length >= 15 || !lettersAndSpaces.test(trimmed)) {
+      setOriginError('El origen debe ser de solo letras (entre 2 y 14 caracteres).');
+      return false;
+    }
+
+    setOriginError(null);
+    return true;
+  };
+
+  // Validate Destination: EXCLUSIVELY letters & spaces, length 2 to 14 characters
+  const validateDestination = (val: string): boolean => {
+    const lettersAndSpaces = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setDestError('El destino es obligatorio.');
+      return false;
+    }
+    if (trimmed.length <= 1 || trimmed.length >= 15 || !lettersAndSpaces.test(trimmed)) {
+      setDestError('El destino debe ser de solo letras (entre 2 y 14 caracteres).');
+      return false;
+    }
+
+    setDestError(null);
+    return true;
+  };
 
   // Inclusions checkboxes
   const [incTransport, setIncTransport] = useState(packageToEdit?.inclusions?.transport ?? true);
@@ -60,8 +125,11 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!title || !origin || !destination) {
-      alert('Por favor completa los campos obligatorios (*).');
+    const isTitleValid = validateTitle(title);
+    const isOriginValid = validateOrigin(origin);
+    const isDestValid = validateDestination(destination);
+
+    if (!isTitleValid || !isOriginValid || !isDestValid) {
       return;
     }
 
@@ -82,10 +150,10 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
 
     const savedPackage: RoutePackage = {
       id: packageToEdit?.id || `pkg-custom-${Date.now()}`,
-      title,
+      title: title.trim(),
       region,
-      origin,
-      destination,
+      origin: origin.trim(),
+      destination: destination.trim(),
       intermediateStops: stopsArray,
       price: Number(price),
       originalPrice: Number(originalPrice),
@@ -160,17 +228,30 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs">
           {/* Title */}
           <div className="space-y-1">
-            <label className="font-bold text-[#0D5FA6] uppercase tracking-wider">
-              Nombre del Paquete / Ruta Turística *
+            <label className="font-bold text-[#0D5FA6] uppercase tracking-wider flex justify-between">
+              <span>Nombre del Paquete / Ruta Turística *</span>
+              <span className="text-[10px] text-slate-400 font-normal">(Solo letras, 2 a 14 car.)</span>
             </label>
             <input
               type="text"
               required
-              placeholder="Ej. Salinas de Guaranda & Chimborazo Explorer VIP"
+              maxLength={14}
+              placeholder="Ej. Ruta Baños"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2.5 font-bold text-slate-800 text-sm focus:ring-2 focus:ring-[#2180A6] outline-none"
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (e.target.value) validateTitle(e.target.value);
+              }}
+              className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2.5 font-bold text-slate-800 text-sm outline-none ${
+                titleError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+              }`}
             />
+            {titleError && (
+              <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                <span>{titleError}</span>
+              </p>
+            )}
           </div>
 
           {/* Region, Origin & Destination */}
@@ -190,27 +271,57 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-slate-700">Origen de Salida *</label>
+              <label className="font-bold text-slate-700 flex justify-between">
+                <span>Origen de Salida *</span>
+                <span className="text-[10px] text-slate-400 font-normal">(2-14 car.)</span>
+              </label>
               <input
                 type="text"
                 required
+                maxLength={14}
                 placeholder="Ej. Quito"
                 value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                onChange={(e) => {
+                  setOrigin(e.target.value);
+                  if (e.target.value) validateOrigin(e.target.value);
+                }}
+                className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2 font-semibold text-slate-800 outline-none ${
+                  originError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                }`}
               />
+              {originError && (
+                <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{originError}</span>
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-slate-700">Destino Turístico *</label>
+              <label className="font-bold text-slate-700 flex justify-between">
+                <span>Destino Turístico *</span>
+                <span className="text-[10px] text-slate-400 font-normal">(2-14 car.)</span>
+              </label>
               <input
                 type="text"
                 required
-                placeholder="Ej. Guaranda"
+                maxLength={14}
+                placeholder="Ej. Baños"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                onChange={(e) => {
+                  setDestination(e.target.value);
+                  if (e.target.value) validateDestination(e.target.value);
+                }}
+                className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2 font-semibold text-slate-800 outline-none ${
+                  destError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                }`}
               />
+              {destError && (
+                <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{destError}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -228,9 +339,6 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
               onChange={(e) => setIntermediateStopsText(e.target.value)}
               className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
             />
-            <p className="text-[10px] text-slate-500">
-              Estas paradas se mostrarán al usuario para abordar sin necesidad de pasar por terminales físicas.
-            </p>
           </div>
 
           {/* Prices, Duration & Rating */}
@@ -311,7 +419,6 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
                 { label: 'Guaranda', url: '/images/guaranda.jpg' },
                 { label: 'Puerto López', url: '/images/puerto_lopez.jpg' },
               ].map((img) => (
-
                 <button
                   key={img.url}
                   type="button"
@@ -346,7 +453,7 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
               <label className="font-bold text-slate-700">Horarios de Salida (Comas)</label>
               <input
                 type="text"
-                placeholder="Ej. 06:00 AM, 08:30 AM, 02:00 PM"
+                placeholder="Ej. 06:00 AM, 08:30 AM"
                 value={departureTimesText}
                 onChange={(e) => setDepartureTimesText(e.target.value)}
                 className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
@@ -360,7 +467,7 @@ export const PackageFormModal: React.FC<PackageFormModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Ej. Visita a fábrica de chocolates Salinerito, Mirador al Chimborazo, Degustación de quesos"
+              placeholder="Ej. Visita a chocolates Salinerito, Mirador al Chimborazo"
               value={activitiesText}
               onChange={(e) => setActivitiesText(e.target.value)}
               className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"

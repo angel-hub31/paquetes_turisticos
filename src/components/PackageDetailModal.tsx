@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { RoutePackage, TicketBooking } from '../types';
 import { SeatSelector } from './SeatSelector';
+import { generatePdfReceipt } from '../utils/generatePdfReceipt';
 import confetti from 'canvas-confetti';
 import {
   X,
@@ -13,8 +14,9 @@ import {
   Bus,
   ShieldCheck,
   Building,
+  Download,
+  AlertCircle
 } from 'lucide-react';
-
 
 interface PackageDetailModalProps {
   packageData: RoutePackage | null;
@@ -43,10 +45,77 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'deuna' | 'card' | 'transfer'>('deuna');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validation Error States
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  // Validate Name: EXCLUSIVELY letters and spaces, length 2 to 14 characters (mayor a 1 y menor a 15)
+  const validatePassengerName = (val: string): boolean => {
+    const lettersAndSpaces = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setNameError('El nombre completo es obligatorio.');
+      return false;
+    }
+    if (trimmed.length <= 1) {
+      setNameError('El nombre debe tener más de 1 caracter (mínimo 2 letras).');
+      return false;
+    }
+    if (trimmed.length >= 15) {
+      setNameError('El nombre debe tener menos de 15 caracteres (máximo 14 letras).');
+      return false;
+    }
+    if (!lettersAndSpaces.test(trimmed)) {
+      setNameError('El nombre debe contener EXCLUSIVAMENTE letras (sin números ni símbolos).');
+      return false;
+    }
+
+    setNameError(null);
+    return true;
+  };
+
+  // Validate Doc: EXCLUSIVELY numbers (0-9)
+  const validatePassengerDoc = (val: string): boolean => {
+    const numbersOnly = /^[0-9]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setDocError('La cédula es obligatoria.');
+      return false;
+    }
+    if (!numbersOnly.test(trimmed)) {
+      setDocError('La cédula debe contener EXCLUSIVAMENTE números (dígitos 0 al 9).');
+      return false;
+    }
+
+    setDocError(null);
+    return true;
+  };
+
+  // Validate Phone: EXCLUSIVELY numbers (0-9)
+  const validatePassengerPhone = (val: string): boolean => {
+    const numbersOnly = /^[0-9]+$/;
+    const trimmed = val.trim();
+
+    if (trimmed && !numbersOnly.test(trimmed)) {
+      setPhoneError('El teléfono debe contener EXCLUSIVAMENTE números.');
+      return false;
+    }
+
+    setPhoneError(null);
+    return true;
+  };
+
   const handleBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passengerName || !passengerDoc) {
-      alert('Por favor completa el nombre y número de cédula del pasajero.');
+
+    const isNameValid = validatePassengerName(passengerName);
+    const isDocValid = validatePassengerDoc(passengerDoc);
+    const isPhoneValid = validatePassengerPhone(passengerPhone);
+
+    if (!isNameValid || !isDocValid || !isPhoneValid) {
       return;
     }
 
@@ -68,9 +137,9 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
         departureDate: today,
         departureTime: selectedDepartureTime,
         seatNumber: selectedSeat,
-        passengerName,
-        passengerDoc,
-        passengerPhone: passengerPhone || '+593 99 000 0000',
+        passengerName: passengerName.trim(),
+        passengerDoc: passengerDoc.trim(),
+        passengerPhone: passengerPhone.trim() || '0990000000',
         totalPaid: packageData.price,
         status: 'Confirmed',
         inclusions: packageData.inclusions,
@@ -79,7 +148,14 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
         createdAt: new Date().toISOString(),
       };
 
-      // Fire festive confetti
+      // 1. Trigger PDF receipt generation & download
+      try {
+        generatePdfReceipt(newTicket);
+      } catch (err) {
+        console.error('PDF generation error:', err);
+      }
+
+      // 2. Fire festive confetti
       confetti({
         particleCount: 100,
         spread: 70,
@@ -166,7 +242,6 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                     e.currentTarget.src = 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=800&auto=format&fit=crop';
                   }}
                 />
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4 text-white justify-between">
                   <div>
                     <p className="text-xs text-[#4BBF9E] font-bold">Hospedaje Incluido:</p>
@@ -242,7 +317,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                     Punto de Recogida Intermedio Seleccionado (RF-06)
                   </label>
                   <p className="text-xs text-slate-600">
-                    Puedes abordar en el terminal principal o en cualquier intersección intermediate de la ruta sin acudir a terminales físicas.
+                    Puedes abordar en el terminal principal o en cualquier intersección intermedia de la ruta sin acudir a terminales físicas.
                   </p>
                 </div>
 
@@ -324,47 +399,95 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Passenger Details Form */}
+              {/* Passenger Details Form with Strict Validation */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold text-[#0D5FA6] uppercase tracking-wide flex items-center gap-1.5">
                   <User className="w-4 h-4 text-[#37A6A6]" />
-                  Datos del Pasajero Titular
+                  Datos del Pasajero Titular *
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Passenger Name Field */}
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700">Nombre Completo *</label>
+                    <label className="text-xs font-bold text-slate-700 flex justify-between">
+                      <span>Nombre Completo *</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Solo letras, 2 a 14 car.)</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ej. Ana Lucía Torres"
+                      maxLength={14}
+                      placeholder="Ej. Ana Torres"
                       value={passengerName}
-                      onChange={(e) => setPassengerName(e.target.value)}
-                      className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                      onChange={(e) => {
+                        setPassengerName(e.target.value);
+                        if (e.target.value) validatePassengerName(e.target.value);
+                      }}
+                      className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none ${
+                        nameError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                      }`}
                     />
+                    {nameError && (
+                      <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 pt-0.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                        <span>{nameError}</span>
+                      </p>
+                    )}
                   </div>
 
+                  {/* Passenger Document Field */}
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700">Cédula de Identidad / Pasaporte *</label>
+                    <label className="text-xs font-bold text-slate-700 flex justify-between">
+                      <span>Cédula / Pasaporte *</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Solo números)</span>
+                    </label>
                     <input
                       type="text"
                       required
+                      inputMode="numeric"
                       placeholder="Ej. 1723984102"
                       value={passengerDoc}
-                      onChange={(e) => setPassengerDoc(e.target.value)}
-                      className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                      onChange={(e) => {
+                        setPassengerDoc(e.target.value);
+                        if (e.target.value) validatePassengerDoc(e.target.value);
+                      }}
+                      className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none ${
+                        docError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                      }`}
                     />
+                    {docError && (
+                      <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 pt-0.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                        <span>{docError}</span>
+                      </p>
+                    )}
                   </div>
 
+                  {/* Passenger Phone Field */}
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-700">Teléfono WhatsApp de Contacto</label>
+                    <label className="text-xs font-bold text-slate-700 flex justify-between">
+                      <span>Teléfono WhatsApp de Contacto</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Solo números)</span>
+                    </label>
                     <input
                       type="tel"
-                      placeholder="Ej. +593 99 123 4567"
+                      inputMode="numeric"
+                      placeholder="Ej. 0991234567"
                       value={passengerPhone}
-                      onChange={(e) => setPassengerPhone(e.target.value)}
-                      className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                      onChange={(e) => {
+                        setPassengerPhone(e.target.value);
+                        if (e.target.value) validatePassengerPhone(e.target.value);
+                      }}
+                      className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none ${
+                        phoneError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                      }`}
                     />
+                    {phoneError && (
+                      <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 pt-0.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                        <span>{phoneError}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -428,17 +551,18 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                   {isSubmitting ? (
                     <>
                       <div className="w-5 h-5 border-2 border-[#0D5FA6] border-t-transparent rounded-full animate-spin" />
-                      <span>Generando Ticket Digital QR PWA...</span>
+                      <span>Generando PDF y Ticket QR...</span>
                     </>
                   ) : (
                     <>
-                      <ShieldCheck className="w-5 h-5" />
-                      <span>Confirmar Pago de ${packageData.price} USD & Generar QR</span>
+                      <Download className="w-5 h-5" />
+                      <span>Confirmar Pago de ${packageData.price} USD & Descargar PDF</span>
                     </>
                   )}
                 </button>
-                <p className="text-[11px] text-center text-slate-500 font-medium">
-                  🔒 Pago seguro simulado. Tu pasaje se guardará de forma offline en tu PWA.
+                <p className="text-[11px] text-center text-slate-500 font-medium flex items-center justify-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#37A6A6]" />
+                  <span>Pago seguro simulado. Se descargará el PDF oficial de comprobante automáticamente.</span>
                 </p>
               </div>
             </form>

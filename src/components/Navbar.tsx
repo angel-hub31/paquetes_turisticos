@@ -1,7 +1,6 @@
 import React from 'react';
 import type { NavigationTab } from '../types';
-
-import { Compass, Bus, QrCode, ShieldCheck, Smartphone, Monitor } from 'lucide-react';
+import { Compass, Bus, QrCode, ShieldCheck, Smartphone, Monitor, UserCheck, LogOut } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: NavigationTab;
@@ -10,6 +9,8 @@ interface NavbarProps {
   isMobilePreview: boolean;
   setIsMobilePreview: React.Dispatch<React.SetStateAction<boolean>>;
   onInstallPwa: () => void;
+  currentUser?: string;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -19,31 +20,61 @@ export const Navbar: React.FC<NavbarProps> = ({
   isMobilePreview,
   setIsMobilePreview,
   onInstallPwa,
+  currentUser = 'Admin',
+  onLogout,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#0D5FA6] text-white shadow-md transition-all border-b border-[#2180A6]/30">
       {/* Upper Brand Bar */}
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Brand Logo & Name */}
-        <div 
-          onClick={() => setActiveTab('packages')} 
-          className="flex items-center gap-3 cursor-pointer group select-none"
-        >
-          <div className="w-10 h-10 rounded-xl bg-white text-[#0D5FA6] flex items-center justify-center font-bold text-xl shadow-md group-hover:scale-105 transition-transform border-2 border-[#4BBF9E]">
-            🚌
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-xl tracking-tight text-white drop-shadow-sm">
-                Movilis<span className="text-[#4BBF9E]">Turismo</span>
+        {/* Left Side: Admin Avatar Badge + Brand Logo */}
+        <div className="flex items-center gap-3">
+          {/* Upper Left Administrator Avatar Badge */}
+          <div
+            className="flex items-center gap-2 bg-[#2180A6]/40 hover:bg-[#2180A6]/70 border border-white/20 px-2.5 py-1.5 rounded-xl transition-all shadow-sm"
+            title={`Sesión activa: ${currentUser} (Administrador)`}
+          >
+            <div className="w-8 h-8 rounded-lg bg-[#4BBF9E] text-[#0D5FA6] flex items-center justify-center font-extrabold text-sm shadow">
+              <UserCheck className="w-5 h-5 text-[#0D5FA6]" />
+            </div>
+            <div className="hidden sm:block text-left">
+              <span className="text-[10px] font-extrabold text-[#4BBF9E] uppercase tracking-wider block leading-none">
+                Administrador
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#37A6A6] text-white uppercase tracking-wider">
-                EC
+              <span className="text-xs font-bold text-white line-clamp-1">
+                {currentUser}
               </span>
             </div>
-            <p className="text-xs text-blue-100/80 font-medium hidden sm:block">
-              Transporte e Itinerarios Turísticos de Ecuador
-            </p>
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-1 text-blue-200 hover:text-white transition-colors ml-1"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="w-4 h-4 text-rose-300 hover:text-rose-100" />
+              </button>
+            )}
+          </div>
+
+          {/* Brand Logo & Name */}
+          <div 
+            onClick={() => setActiveTab('packages')} 
+            className="flex items-center gap-2 cursor-pointer group select-none pl-2 border-l border-[#2180A6]/50"
+          >
+            <div className="w-9 h-9 rounded-xl bg-white text-[#0D5FA6] flex items-center justify-center font-bold text-lg shadow-md group-hover:scale-105 transition-transform border-2 border-[#4BBF9E]">
+              🚌
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white drop-shadow-sm">
+                  Movilis<span className="text-[#4BBF9E]">Turismo</span>
+                </span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#37A6A6] text-white uppercase tracking-wider">
+                  EC
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

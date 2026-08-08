@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MOCK_VEHICLES, ECUADOR_CITIES } from '../data/mockData';
 import type { PrivateVehicle } from '../types';
-import { ShieldCheck, Check, Sparkles, ArrowRight, X } from 'lucide-react';
+import { ShieldCheck, Check, Sparkles, ArrowRight, X, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const PrivateRentalView: React.FC = () => {
@@ -14,11 +14,13 @@ export const PrivateRentalView: React.FC = () => {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
 
-
-  // Contact form in modal
+  // Contact form in modal with strict validation
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [notes, setNotes] = useState('');
+
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const calculateEstimate = (vehicle: PrivateVehicle) => {
     const base = vehicle.pricePerDay * days;
@@ -30,10 +32,64 @@ export const PrivateRentalView: React.FC = () => {
     setSelectedVehicle(veh);
     setShowQuoteModal(true);
     setQuoteSuccess(false);
+    setNameError(null);
+    setPhoneError(null);
+  };
+
+  // Validate Applicant Name: EXCLUSIVELY letters and spaces, length 2 to 14 characters (mayor a 1 y menor a 15)
+  const validateContactName = (val: string): boolean => {
+    const lettersAndSpaces = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setNameError('El nombre del solicitante o empresa es obligatorio.');
+      return false;
+    }
+    if (trimmed.length <= 1) {
+      setNameError('El nombre debe tener más de 1 caracter (mínimo 2 letras).');
+      return false;
+    }
+    if (trimmed.length >= 15) {
+      setNameError('El nombre debe tener menos de 15 caracteres (máximo 14 letras).');
+      return false;
+    }
+    if (!lettersAndSpaces.test(trimmed)) {
+      setNameError('El nombre debe contener EXCLUSIVAMENTE letras (sin números ni símbolos).');
+      return false;
+    }
+
+    setNameError(null);
+    return true;
+  };
+
+  // Validate Contact Phone: EXCLUSIVELY numbers (0-9)
+  const validateContactPhone = (val: string): boolean => {
+    const numbersOnly = /^[0-9]+$/;
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+      setPhoneError('El teléfono de contacto es obligatorio.');
+      return false;
+    }
+    if (!numbersOnly.test(trimmed)) {
+      setPhoneError('El teléfono debe contener EXCLUSIVAMENTE números (dígitos 0 al 9).');
+      return false;
+    }
+
+    setPhoneError(null);
+    return true;
   };
 
   const handleSubmitQuote = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const isNameValid = validateContactName(contactName);
+    const isPhoneValid = validateContactPhone(contactPhone);
+
+    if (!isNameValid || !isPhoneValid) {
+      return;
+    }
+
     setQuoteSuccess(true);
     confetti({
       particleCount: 80,
@@ -69,7 +125,7 @@ export const PrivateRentalView: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Origen de Salida</label>
+            <label className="text-xs font-bold text-slate-700">Origen de Salida *</label>
             <select
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
@@ -82,7 +138,7 @@ export const PrivateRentalView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Destino de la Ruta</label>
+            <label className="text-xs font-bold text-slate-700">Destino de la Ruta *</label>
             <select
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
@@ -95,7 +151,7 @@ export const PrivateRentalView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Número de Días</label>
+            <label className="text-xs font-bold text-slate-700">Número de Días *</label>
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
@@ -108,7 +164,7 @@ export const PrivateRentalView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Pasajeros Estimados</label>
+            <label className="text-xs font-bold text-slate-700">Pasajeros Estimados *</label>
             <input
               type="number"
               min={1}
@@ -133,7 +189,6 @@ export const PrivateRentalView: React.FC = () => {
           </label>
         </div>
       </div>
-
 
       {/* Vehicles Fleet Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -247,27 +302,57 @@ export const PrivateRentalView: React.FC = () => {
 
                 <div className="space-y-3 text-xs">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Nombre del Solicitante / Empresa *</label>
+                    <label className="font-bold text-slate-700 flex justify-between">
+                      <span>Nombre del Solicitante / Empresa *</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Solo letras, 2 a 14 car.)</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ej. Juan Pérez - Agencia Ecuador Tour"
+                      maxLength={14}
+                      placeholder="Ej. Juan Pérez"
                       value={contactName}
-                      onChange={(e) => setContactName(e.target.value)}
-                      className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                      onChange={(e) => {
+                        setContactName(e.target.value);
+                        if (e.target.value) validateContactName(e.target.value);
+                      }}
+                      className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2 font-semibold text-slate-800 outline-none ${
+                        nameError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                      }`}
                     />
+                    {nameError && (
+                      <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 pt-0.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                        <span>{nameError}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Teléfono WhatsApp de Contacto *</label>
+                    <label className="font-bold text-slate-700 flex justify-between">
+                      <span>Teléfono WhatsApp de Contacto *</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Solo números)</span>
+                    </label>
                     <input
                       type="tel"
                       required
-                      placeholder="Ej. +593 99 876 5432"
+                      inputMode="numeric"
+                      placeholder="Ej. 0998765432"
                       value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      className="w-full bg-[#F2F2F2] border border-slate-300 rounded-xl px-3 py-2 font-semibold text-slate-800 focus:ring-2 focus:ring-[#2180A6] outline-none"
+                      onChange={(e) => {
+                        setContactPhone(e.target.value);
+                        if (e.target.value) validateContactPhone(e.target.value);
+                      }}
+                      className={`w-full bg-[#F2F2F2] border rounded-xl px-3 py-2 font-semibold text-slate-800 outline-none ${
+                        phoneError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300 focus:ring-2 focus:ring-[#2180A6]'
+                      }`}
                     />
+                    {phoneError && (
+                      <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 pt-0.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                        <span>{phoneError}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -297,7 +382,7 @@ export const PrivateRentalView: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold text-[#0D5FA6]">¡Solicitud Enviada con Éxito!</h3>
                 <p className="text-xs text-slate-600 max-w-sm mx-auto">
-                  Un asesor operativo de Movilis Turismo se comunicará en menos de 15 minutos al WhatsApp{' '}
+                  Un asesor operativo de MovilisTurismo se comunicará en menos de 15 minutos al WhatsApp{' '}
                   <span className="font-bold text-slate-800">{contactPhone}</span> para formalizar la reserva y asignación de la unidad.
                 </p>
                 <button

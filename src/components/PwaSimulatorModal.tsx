@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, CheckCircle2, Download, Zap } from 'lucide-react';
-
+import confetti from 'canvas-confetti';
 
 interface PwaSimulatorModalProps {
   isOpen: boolean;
@@ -11,7 +11,25 @@ export const PwaSimulatorModal: React.FC<PwaSimulatorModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const [installedSuccess, setInstalledSuccess] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleInstallClick = () => {
+    setInstalledSuccess(true);
+
+    confetti({
+      particleCount: 70,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#0D5FA6', '#2180A6', '#37A6A6', '#4BBF9E'],
+    });
+
+    setTimeout(() => {
+      setInstalledSuccess(false);
+      onClose();
+    }, 1800);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -31,52 +49,63 @@ export const PwaSimulatorModal: React.FC<PwaSimulatorModalProps> = ({
             Progressive Web App (PWA) Ecuador
           </span>
           <h3 className="text-xl font-black text-slate-900">
-            Instalar Movilis Turismo PWA
+            Instalar MovilisTurismo PWA
           </h3>
           <p className="text-xs text-slate-600">
             Añada la app a la pantalla de inicio de su teléfono celular para acceder a sus billetes sin conexión a Internet.
           </p>
         </div>
 
-        <div className="bg-[#F2F2F2] p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
-          <h4 className="font-bold text-[#0D5FA6] uppercase tracking-wider flex items-center gap-1.5">
-            <Zap className="w-4 h-4 text-[#4BBF9E]" /> Beneficios Clave PWA:
-          </h4>
-          <ul className="space-y-1.5 text-slate-700 font-semibold">
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4BBF9E]" />
-              Visualización de QR 100% Offline (RF-04 / RF-05)
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4BBF9E]" />
-              Abordaje directo en paradas intermedias (RF-06)
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4BBF9E]" />
-              Sin consumir almacenamiento nativo pesado
-            </li>
-          </ul>
-        </div>
+        {installedSuccess ? (
+          <div className="bg-[#4BBF9E]/15 border-2 border-[#4BBF9E] p-4 rounded-2xl text-center space-y-2 animate-fadeIn">
+            <CheckCircle2 className="w-10 h-10 text-[#0D5FA6] mx-auto" />
+            <h4 className="font-extrabold text-[#0D5FA6] text-sm">
+              ¡PWA Instalada Correctamente!
+            </h4>
+            <p className="text-xs text-slate-700 font-semibold">
+              MovilisTurismo ya está disponible en su pantalla de inicio en modo offline.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-[#F2F2F2] p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
+            <h4 className="font-bold text-[#0D5FA6] uppercase tracking-wider flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-[#4BBF9E]" /> Beneficios Clave PWA:
+            </h4>
+            <ul className="space-y-1.5 text-slate-700 font-semibold">
+              <li className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#4BBF9E]" />
+                Visualización de QR 100% Offline (RF-04 / RF-05)
+              </li>
+              <li className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#4BBF9E]" />
+                Abordaje directo en paradas intermedias (RF-06)
+              </li>
+              <li className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#4BBF9E]" />
+                Sin consumir almacenamiento nativo pesado
+              </li>
+            </ul>
+          </div>
+        )}
 
-        <div className="pt-2 space-y-2">
-          <button
-            onClick={() => {
-              alert('¡Aplicación Movilis Turismo PWA agregada a tu pantalla de inicio con éxito!');
-              onClose();
-            }}
-            className="w-full bg-[#0D5FA6] hover:bg-[#2180A6] text-white font-extrabold py-3 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4 text-[#4BBF9E]" />
-            <span>Agregar a Pantalla de Inicio (Instalar)</span>
-          </button>
+        {!installedSuccess && (
+          <div className="pt-2 space-y-2">
+            <button
+              onClick={handleInstallClick}
+              className="w-full bg-[#0D5FA6] hover:bg-[#2180A6] text-white font-extrabold py-3 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4 text-[#4BBF9E]" />
+              <span>Agregar a Pantalla de Inicio (Instalar)</span>
+            </button>
 
-          <button
-            onClick={onClose}
-            className="w-full text-xs font-bold text-slate-500 hover:text-slate-700 py-1"
-          >
-            Continuar navegando en navegador
-          </button>
-        </div>
+            <button
+              onClick={onClose}
+              className="w-full text-xs font-bold text-slate-500 hover:text-slate-700 py-1"
+            >
+              Continuar navegando en navegador
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

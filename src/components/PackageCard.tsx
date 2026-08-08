@@ -17,10 +17,9 @@ export const PackageCard: React.FC<PackageCardProps> = ({
 }) => {
   const handleDeleteConfirm = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`¿Estás seguro de que deseas eliminar el paquete "${packageData.title}"?`)) {
-      onDeletePackage?.(packageData.id);
-    }
+    onDeletePackage?.(packageData.id);
   };
+
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group hover:-translate-y-1 relative">
